@@ -1,0 +1,48 @@
+#!/usr/bin/racket
+#lang racket
+(define lines (file->lines "input"))
+(define testlines (file->lines "test_input"))
+
+;; can re-use some functions from before
+(define (lines->hash lines)
+  (local ((define (aline->hash aline res c)
+            (cond
+              [(empty? aline) res]
+              [else (begin
+                      (hash-set! res c (first aline))
+                      (aline->hash (rest aline) res (+ c 1)))]))
+          (define (lines->hash lines res c)
+            (cond
+              [(empty? lines) res]
+              [(begin
+                 (hash-set! res c (aline->hash (map string (string->list (first lines))) (make-hash) 0))
+                 (lines->hash (rest lines) res (+ c 1)))])))
+    (lines->hash lines (make-hash) 0)))
+
+(define (get-tile amat x y)
+  (hash-ref (hash-ref amat y) x))
+
+;; Expand the galaxy
+;; (define (expand galaxy)
+;;   (local ((define (col-empty? galaxy x y ymax)
+;;             (cond
+;;               [(> c ymax) true]
+;;               [(string=? (get-tile galaxy x y) ".")
+;;                (col-empty? galaxy x (+ y 1))]))
+;;           (define (empty-cols galaxy c)
+;;             (let ([ymax (- (length (hash-keys galaxy)) 1)])
+;;               (cond
+;;                 [(> c ymax) empty]
+;;                 [(col-empty? galaxy c 0 ymax)
+;;                  (cons c (empty-cols galaxy (+ c 1)))]
+;;                 [else (col-empty? galaxy (+ c 1))])))
+;;           (define (empty-rows galaxy r) ;; init c as highest key value
+;;             (cond
+;;               [(< 0 r) empty]
+;;               [(= 0 (length (filter (lambda (el) (string=? "#" el)) (hash-values (hash-ref galaxy r)))))
+;;                (cons r (empty-rows galaxy (- r 1)))]))
+;;           (define (insert-col galaxy index x)
+;;             (cond
+;;               [(> index (- (length (hash-keys galaxy)) 1)) galaxy]
+;;               [else (hash-set! (hash-ref galaxy ]
+              

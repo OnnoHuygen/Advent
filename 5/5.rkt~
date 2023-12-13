@@ -1,0 +1,5 @@
+#!/usr/bin/racket
+#lang racket
+
+(define lines (file->lines "input"))
+(define seeds (string->number (rest (string-split (first lines) " "))))

@@ -1,0 +1,72 @@
+#!/usr/bin/racket
+#lang racket
+(require racket/port)
+
+;; Need different algorithm:
+;; process the string from left to right
+;; For each letter in string, check if it is the beginning of a digitword
+;; If it is, replace by digit word
+;; If it is not, move on to next letter
+
+(define digits
+  (local ((define (dstrings c)
+            (cond
+              [(> c 9) empty]
+              [else (cons (number->string c) (dstrings (+ c 1)))])))
+    (dstrings 0)))
+
+(define digits-with-spelling
+  (local ((define spelled-digits
+            (list "zero" "one" "two" "three" "four" "five"
+                  "six" "seven" "eight" "nine")))
+    (append digits spelled-digits)))
+
+(define (to_digit charlist)
+  (let* ([astring (list->string charlist)]
+         [sn (string->number astring)]
+         [rev (list->string (reverse charlist))])
+    (cond
+      [sn astring]
+      [(or (string=? astring "zero") (string=? rev "zero")) "0"]
+      [(or (string=? astring "one") (string=? rev "one")) "1"]
+      [(or (string=? astring "two") (string=? rev "two")) "2"]
+      [(or (string=? astring "three") (string=? rev "three")) "3"]
+      [(or (string=? astring "four") (string=? rev "four")) "4"]
+      [(or (string=? astring "five") (string=? rev "five")) "5"]
+      [(or (string=? astring "six") (string=? rev "six")) "6"]
+      [(or (string=? astring "seven") (string=? rev "seven")) "7"]
+      [(or (string=? astring "eight") (string=? rev "eight")) "8"]
+      [(or (string=? astring "nine") (string=? rev "nine")) "9"]
+      [else false])))
+      
+(define (is_sublist? subl alist)
+  (cond
+    [(empty? subl) true]
+    [(empty? alist) false]
+    [(char=? (first subl) (first alist)) (is_sublist? (rest subl) (rest alist))]
+    [else false]))
+
+(define (get_digit al comparelist)
+  (local ((define (check_all_digits alist digitlist)
+            (cond
+              [(empty? digitlist) (list false 0)]
+              [(is_sublist? (first digitlist) alist) (list true (to_digit (first digitlist)))]
+              [else (check_all_digits alist (rest digitlist))]))
+          (define (first_digit alist comparelist substr)
+            (let ([result (check_all_digits (reverse substr) comparelist)])
+              (cond
+                [(first result) (first (rest result))]
+                [(empty? alist) false]
+                [else (first_digit (rest alist) comparelist (append substr (list (first alist))))]))))
+    (first_digit (rest al) comparelist (list (first al)))))
+
+(define (get_number astr [includelist digits-with-spelling])
+  (let* ([dlist (map string->list includelist)]
+         [rev-dlist (map reverse dlist)]
+         [d1 (get_digit (string->list astr) rev-dlist)]
+         [d2 (get_digit (reverse (string->list astr)) dlist)])
+    (string->number (string-append d1 d2))))
+
+(define test_answer2 (foldl + 0 (map get_number (file->lines "1_test_input"))))
+(define answer2 (foldl + 0 (map get_number (file->lines "1_input"))))
+(define answer1 (foldl + 0 (map (lambda (lst) (get_number lst digits)) (file->lines "1_input"))))

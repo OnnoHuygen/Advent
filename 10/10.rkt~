@@ -1,0 +1,20 @@
+#!/usr/bin/racket
+#lang racket
+(define lines (file->lines "input"))
+(define testlines (file->lines "test_input"))
+
+
+(define (lines->hash lines)
+  (local ((define (aline->hash aline res c)
+            (cond
+              [(empty? aline) res]
+              [else (begin
+                      (hash-set! res c (first aline))
+                      (aline->hash (rest aline) res (+ c 1)))]))
+          (define (lines->hash lines res c)
+            (cond
+              [(empty? lines) res]
+              [(begin
+                 (hash-set! res c (aline->hash (map string (string->list (first lines))) (make-hash) 0))
+                 (lines->hash (rest lines) res (+ c 1)))])))
+    (lines->hash lines (make-hash) 0)))

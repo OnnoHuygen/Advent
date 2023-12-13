@@ -1,0 +1,31 @@
+#!/usr/bin/racket
+#lang racket
+
+(define lines (file->lines "input"))
+(define testlines (file->lines "test_input"))
+
+
+;; (define (extrapolate aline)
+;;   (local ((define (diffline aline prev)
+;;             (cond
+;;               [(empty? aline) empty]
+;;               [else (cons (- (first aline) prev)
+;;                           (diffline (rest aline) (first aline)))]))
+;;           (define (all=? alist entry)
+;;             (cond
+;;               [(empty? alist) true]
+;;               [(equal? (first alist) entry)
+;;                (all=? (rest alist) entry)]
+;;               [else false]))
+;;           (define (to-hash current-line c result)
+;;             (cond
+;;               [(all=? current-line 0) result]
+;;               [else (let ([dlist (diffline (rest current-line) (first current-line))])
+;;                       (begin
+;;                         (hash-set! result (+ c 1) dlist)
+;;                         (to-hash dlist (+ c 1) result)))]))
+;;           (define (extrapolate ahash c difval)
+;;             (cond
+;;               [(= 0 c) (+ (last (hash-ref ahash c)) difval)]
+;;               [else (extrapolate ahash (- c 1) (+ (last (hash-ref ahash c)) difval))])))
+;;     (let* ([h (make-hash)])
