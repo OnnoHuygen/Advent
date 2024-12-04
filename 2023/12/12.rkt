@@ -1,0 +1,196 @@
+#!/usr/bin/racket
+#lang racket
+(define lines (file->lines "input"))
+(define testlines (file->lines "test_input"))
+
+(define-struct pair (current sequence))
+
+(define (line->pair aline)
+  (let ([spl (string-split aline " ")])
+    (list (map string (string->list (first spl)))
+          (map string->number (string-split (first (rest spl)) ",")))))
+
+(define testpairs (map line->pair testlines))
+(define pairs (map line->pair lines))
+
+;; Idea to solve this
+;; From the list containing contiguous sequences, check all possible locations where you can place the first one
+;; This has to be placed such that:
+;; - It fits with the pattern of broken springs already present
+;; - The number of empty spaces left to the right is equal to the sum of the patterns left plus one for each pattern left.
+;;
+;; For each placement that is possible
+;; place the sequence, then cut off the result right after the placed sequence.
+;; This defines a new given pattern where a new sequence can be placed.
+
+;; Yes this is a good idea
+;; Also, if you cannot place the current first one on a valid location, just return an empty list.
+;; Then
+
+(define (contains? alist sublist)
+  (local ((define (starts-with alist sublist)
+            (cond
+              [(empty? sublist) true]
+              [(empty? alist) false]
+              [(equal? (first alist) (first sublist))
+               (starts-with (rest alist) (rest sublist))]
+              [else false]))
+          (define (contains? alist sublist)
+            (cond
+              [(empty? alist) false]
+              [(starts-with alist sublist) true]
+              [else (contains? (rest alist) sublist)])))
+    (contains? alist sublist)))
+
+(define (all-placements result current sequence) ;; Returns a list of (result current sequence)
+  (local ((define (n-times el n);; List containing n-times an element
+            (cond
+              [(= 0 n) empty]
+              [else (cons el (n-times el (- n 1)))]))
+          (define (skip-n alist n);; rest of list after skipping n first entries
+            (cond
+              [(empty? alist) empty]
+              [(= 0 n) alist]
+              [else (skip-n (rest alist) (- n 1))]))
+          (define (first-n alist n)
+            (cond
+              [(= 0 n) empty]
+              [else (cons (first alist) (first-n (rest alist) (- n 1)))]))
+          (define (place-at alist sublist index)
+            (cond
+              [(= 0 index) (append sublist (skip-n alist (length sublist)))]
+              [else (cons (first alist)
+                          (place-at (rest alist) sublist (- index 1)))]))
+          (define (subpart alist from size)
+            (cond
+              [(= 0 size) empty]
+              [(= 0 from) (cons (first alist) (subpart (rest alist) from (- size 1)))]
+              [else (subpart (rest alist) (- from 1) size)]))
+          (define (try-at result current sequence index) ;; takes three elements, returns a list. ALWAYS returns a single list. can be empty or a list with three elements.
+            (cond
+              [(or
+                (> (+ index (first sequence)) (length current))
+                (member "." (subpart current index (first sequence)))
+                (< (- (length current) (+ index (first sequence)));; remaining empty positions
+                   (+ (foldl + 0 (rest sequence))
+                      (- (length (rest sequence)) 1)))
+                (and
+                 (> (length current) (+ index (first sequence)))
+                 (string=? (list-ref current (+ index (first sequence))) "#"))
+                (and
+                 (> index 0)
+                 (string=? (list-ref current (- index 1)) "#"))) ;; cant place here, would overlap with next one.)
+               empty]
+              [else (list (append result (place-at (first-n current (+ (first sequence) index))
+                                                   (n-times "#" (first sequence))
+                                                   index)
+                                  (list ".")) ;; take one extra off, as one space is needed in betwen
+                          (skip-n current (+ (first sequence) index 1)) ;; one extra for space needed after placing this one.
+                          (rest sequence))]))
+
+          
+          (define (all-placements result current sequence index);; ALWAYS returns a list of trios
+            (cond
+              [(and
+                (> (length current) index)
+                (contains? (first-n current index)
+                           (list "#"))) empty];; already passed a sublist of this size
+              [(and (empty? sequence)
+                    (member "#" current)) empty]
+              [(empty? sequence) (append result current)]
+              [(< (- (length current) (+ index (first sequence)))
+                  (+ (foldl + 0 (rest sequence))
+                     (- (length (rest sequence)) 1))) empty]
+              [else (let ([try (try-at result current sequence index)])
+                      (cond
+                        [(empty? try) (all-placements result current sequence (+ index 1))]
+                        [else (cons try
+                                    (all-placements result current sequence (+ index 1)))]))])))
+    (all-placements result current sequence 0)))
+
+(define (iterate-trio atrio) ;; takes (list result current sequence) and produces (list (list res cur seq) (list res cur seq) ...)
+  (cond
+    [(empty? atrio) empty]
+    [else (all-placements (first atrio) (first (rest atrio)) (first (rest (rest atrio))))]))
+
+(define (possibilities apair)
+  (local ((define (possibilities c resultlist)
+            (cond
+              [(= 0 c) (filter (lambda (el) (not (member "#" (first (rest el))))) resultlist)] ;; REPLACE BACK WITH LENGTH OF RESULTLIST
+              [else (possibilities (- c 1)
+                                   (filter (lambda (el) (not (empty? el))) (foldr append empty (map iterate-trio resultlist))))])))
+    (possibilities (length (first (rest apair)))
+                   (list (list empty (first apair) (first (rest apair)))))))
+
+(define (num-possibilities apair)
+  (length (possibilities apair)))
+
+(define testanswer1 (foldl + 0  (map num-possibilities testpairs)))
+(define answer1 (foldl + 0 (map num-possibilities pairs)))
+;; Just make the sequence by adding one empty in between each number
+;; Count how many empty spots there are left
+;; fill in empties in all possible locations, and check if it is a valid configuration
+;; no this would take way too long.
+
+;; (define (num-possibilities current sequence)
+;;   (local ((define (num-possibilities current sequence)
+;;             (cond
+;;               [(and (empty? sequence)
+;;                     (not (member "#" current))) 1]
+;;               [(empty? sequence) 0]
+              
+
+(define (print-pairs)
+  (local ((define (print-pairs plist c)
+            (cond
+              [(empty? plist) void]
+              [else (begin
+                      (display c)
+                      (display ": ")
+                      (display (first plist))
+                      (display "has possibilities: ")
+                      (display (num-possibilities (first plist)))
+                      (display "\n")
+                      (print-pairs (rest plist) (+ c 1)))])))
+    (print-pairs pairs 0)))
+;; Part two
+
+(define (unfold pair)
+  (local ((define (repeat-record alist n)
+            (cond
+              [(= 1 n) alist]
+              [else (append alist (list "?") (repeat-record alist (- n 1)))]))
+          (define (repeat-n-times alist n)
+            (cond
+              [(= 0 n) empty]
+              [else (append alist (repeat-n-times alist (- n 1)))]))
+          )
+    (list (repeat-record (first pair) 5)
+          (repeat-n-times (first (rest pair)) 5))))
+
+(define (get-answer)
+  (local ((define (get-answer pairlist res c)
+            (cond
+              [(empty? pairlist) res]
+              [else (begin
+                      (display "Now working on entry ")
+                      (display c)
+                      (display "\n")
+                      (get-answer (rest pairlist) (+ res (num-possibilities (unfold (first pairlist))))
+                                  (+ c 1)))])))
+    (get-answer pairs 0 0)))
+
+;; (define testanswer2 (foldl + 0 (map num-possibilities (map unfold testpairs))))
+;; (define answer (foldl + 0 (map num-possibilities (map unfold pairs))))
+;; Takes way too long of course
+;; (define answer (get-answer))
+
+;; I see no way to easily count the number of possibilities without constructing them.
+;; I do see some optimizations.
+
+;; First, start out by 'breaking up' the problems at the "."s.
+;; (define (break-up unfolded-pair)
+;;   (local ((define (break-up current sequence pairlist)
+;;             (cond
+              
+            

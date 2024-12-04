@@ -1,9 +1,0 @@
-#!/usr/bin/racket
-#lang racket
-(require racket/port)
-
-
-;; process-game: string->hash
-;; Put the count of every ball into a hash table
-(define (process-game game)
-  (local ((define 
